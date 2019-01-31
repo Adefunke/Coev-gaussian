@@ -52,7 +52,7 @@ public class GeneticAlgorithm {
     private int bound = 2;
     private int popSize = 100;
     //this dictates the length of each individuals/chromosomes
-    private int geneLength = 20;
+    private int geneLength = 64;
     @NotNull
     private double[][] eval_Values = new double[6][2];
     @NotNull
@@ -61,6 +61,7 @@ public class GeneticAlgorithm {
     private List<ChromosomeSelection> evaluators = new ArrayList<>();
     @NotNull
     private List<ChromosomeSelection> population2EvalTeam = new ArrayList<>();
+    int noOfEvaluation = 0;
 
     public static void main(String[] args) throws CloneNotSupportedException {
 
@@ -77,6 +78,7 @@ public class GeneticAlgorithm {
         //While population searches for a chromosome with maximum fitness
         while (((ga.currentHighestlevelOfFitness > 0 && ga.rastrigan)
                 || (ga.currentHighestlevelOfFitness < (2 * ga.geneLength) && !ga.rastrigan))
+
                 && ga.generationCount < ga.popSize) {
             ++ga.generationCount;
             if (ga.fps) {
@@ -116,6 +118,7 @@ public class GeneticAlgorithm {
 
         }
         //when a solution is found or 100 generations have been produced
+        System.out.println("\nno of evaluations " + ga.noOfEvaluation);
         System.out.println("\nSolution found in generation " + ga.generationCount);
         System.out.println("Fitness: " + ga.currentHighestlevelOfFitness);
         System.out.println("The best pair are: " + fittestChromosome +
@@ -147,7 +150,8 @@ public class GeneticAlgorithm {
         //crossover with a random and quite high probability
         if (rn.nextInt() % 5 < 4) {
             ++noOfCrossover;
-            onePointCrossover();
+            //onePointCrossover();
+            uniformCrossover();
             twoPointCrossover();
         } else {
             populationEvaluationStarters(
@@ -199,27 +203,81 @@ public class GeneticAlgorithm {
      *                  then select the best and return it to the population so as to increase the chance of picking global optimum.
      *                  k can be between 1 and n; Here, I'm picking one random chromosome each then the reproduction process.
      */
-    private void tournamentSelection(int popSize, boolean rastrigan) {
-        firstinPopulation1Picked = population.randomlyPicked(popSize);
-        secondinPopulation1Picked = population.randomlyPicked(popSize);
-        firstinPopulation2Picked = population2.randomlyPicked(popSize);
-        secondinPopulation2Picked = population2.randomlyPicked(popSize);
+    private void tournamentSelection(int popSize, boolean rastrigan) throws CloneNotSupportedException {
+        if (generationCount > 2) {
+            String pos = tournamentSelection(popSize, population1EvalTeam, population,
+                    firstinPopulation1Picked, secondinPopulation1Picked);
+            firstinPopulation1Picked = (ChromosomeSelection) population1EvalTeam.get(
+                    Integer.parseInt(pos.split(" ")[0])).clone();
+            secondinPopulation1Picked = (ChromosomeSelection) population1EvalTeam.get(
+                    Integer.parseInt(pos.split(" ")[1])).clone();
+            tournamentSelection(popSize, population2EvalTeam, population2,
+                    firstinPopulation2Picked, secondinPopulation2Picked);
+            firstinPopulation2Picked = (ChromosomeSelection) population2EvalTeam.get(
+                    Integer.parseInt(pos.split(" ")[0])).clone();
+            secondinPopulation2Picked = (ChromosomeSelection) population2EvalTeam.get(
+                    Integer.parseInt(pos.split(" ")[1])).clone();
+
+        } else {
+            firstinPopulation1Picked = population.randomlyPicked(popSize);
+            secondinPopulation1Picked = population.randomlyPicked(popSize);
+            firstinPopulation2Picked = population2.randomlyPicked(popSize);
+            secondinPopulation2Picked = population2.randomlyPicked(popSize);
+        }
+        population1EvalTeam.clear();
+        population2EvalTeam.clear();
     }
 
-    private void fPSelection(boolean rastrigan) {
-        double rand = new Random().nextDouble();
-        firstinPopulation1Picked = computations.binaryToGray(population.
-                getChromosome(positionOfChromosome(rand, fitnessProb)), bound, rastrigan);
-        rand = new Random().nextDouble();
-        secondinPopulation1Picked = computations.binaryToGray(population.
-                getChromosome(positionOfChromosome(rand, fitnessProb)), bound, rastrigan);
-        rand = new Random().nextDouble();
-        firstinPopulation2Picked = computations.binaryToGray(population2.
-                getChromosome(positionOfChromosome(rand, fitnessProbPop2)), bound, rastrigan);
-        rand = new Random().nextDouble();
-        secondinPopulation2Picked = computations.binaryToGray(population2.
-                getChromosome(positionOfChromosome(rand, fitnessProbPop2)), bound, rastrigan);
+    private String tournamentSelection(int popSize, List<ChromosomeSelection> population1EvalTeam,
+                                       Population population, ChromosomeSelection firstPicked,
+                                       ChromosomeSelection secondPicked) throws CloneNotSupportedException {
+        for (int i = 0; i < population1EvalTeam.size(); i++) {
+            ++noOfEvaluation;
+            population1EvalTeam.set(i, (ChromosomeSelection) population.randomlyPicked(popSize).clone());
+            eval_Values[i][0] = population1EvalTeam.get(i).fitness;
+            eval_Values[i][1] = population1EvalTeam.get(i).secondFitness;
+        }
+        int max = 0;
+        int secondMax = 0;
+        int max2 = 0;
+        int secondMax2 = 0;
+        for (int i = 0; i < eval_Values.length; i++) {
+            if (eval_Values[i][0] >= eval_Values[max][0]) {
+                secondMax = max;
+                max = i;
+            }
+            if (eval_Values[i][1] >= eval_Values[max2][1]) {
+                secondMax2 = max2;
+                max2 = i;
+            }
+        }
+        String theTwoPos = max + " ";
+        if (max != max2) {
+            theTwoPos += String.valueOf(max2);
+        } else {
+            if (eval_Values[secondMax][0] > eval_Values[secondMax2][1]) {
+                theTwoPos += String.valueOf(secondMax);
+            } else {
+                theTwoPos += String.valueOf(secondMax2);
+            }
+        }
+        return theTwoPos;
     }
+
+
+    private void fPSelection(boolean rastrigan) throws CloneNotSupportedException {
+        double rand = new Random().nextDouble();
+        firstinPopulation1Picked = (ChromosomeSelection) computations.binaryToGray(population.
+                getChromosome(positionOfChromosome(rand, fitnessProb)), bound, rastrigan).clone();
+        rand = new Random().nextDouble();
+        secondinPopulation1Picked = (ChromosomeSelection) computations.binaryToGray(population.
+                getChromosome(positionOfChromosome(rand, fitnessProb)), bound, rastrigan).clone();
+        rand = new Random().nextDouble();
+        firstinPopulation2Picked = (ChromosomeSelection) computations.binaryToGray(population2.
+                getChromosome(positionOfChromosome(rand, fitnessProbPop2)), bound, rastrigan).clone();
+        rand = new Random().nextDouble();
+        secondinPopulation2Picked = (ChromosomeSelection) computations.binaryToGray(population2.
+                getChromosome(positionOfChromosome(rand, fitnessProbPop2)), bound, rastrigan).clone();
 
     private int positionOfChromosome(double rand, double[] fitnessProbability) {
         if (rand > 0.6) {
@@ -307,19 +365,31 @@ public class GeneticAlgorithm {
     }
 
     //Uniform crossover
-    private void uniformCrossover() {
+    private void uniformCrossover() throws CloneNotSupportedException {
         Random rn = new Random();
+        firstOffSpringProducedInPopulation1 = (ChromosomeSelection) firstinPopulation1Picked.clone();
+        secondOffSpringProducedInPopulation1 = (ChromosomeSelection) secondinPopulation1Picked.clone();
+        firstOffSpringProducedInPopulation2 = (ChromosomeSelection) firstinPopulation2Picked.clone();
+        secondOffSpringProducedInPopulation2 = (ChromosomeSelection) secondinPopulation2Picked.clone();
 
         //Select a random crossover point
-        int crossOverPoint = rn.nextInt(ChromosomeSelection.geneLength);
+        //int crossOverPoint = rn.nextInt(ChromosomeSelection.geneLength);
 
         //Swap values uniformly among parents
         for (int i = 0; i < ChromosomeSelection.geneLength; i++) {
-            int temp = firstinPopulation1Picked.genes[i];
-            firstinPopulation1Picked.genes[i] = secondinPopulation1Picked.genes[i];
-            secondinPopulation1Picked.genes[i] = temp;
+            int temp = firstOffSpringProducedInPopulation1.genes[i];
+            firstOffSpringProducedInPopulation1.genes[i] = secondOffSpringProducedInPopulation1.genes[i];
+            secondOffSpringProducedInPopulation1.genes[i] = temp;
+            temp = firstOffSpringProducedInPopulation2.genes[i];
+            firstOffSpringProducedInPopulation2.genes[i] = secondOffSpringProducedInPopulation2.genes[i];
+            secondOffSpringProducedInPopulation2.genes[i] = temp;
             i++;
         }
+        populationEvaluationStarters(firstOffSpringProducedInPopulation1,
+                secondOffSpringProducedInPopulation1,
+                firstOffSpringProducedInPopulation2,
+                secondOffSpringProducedInPopulation2);
+
 
     }
 
@@ -345,14 +415,27 @@ public class GeneticAlgorithm {
                         ChromosomeSelection secondOffSpringProducedInPopulation1) {
         //Select a random mutation point
         int mutationPoint = rn.nextInt(ChromosomeSelection.geneLength);
-
-        firstOffSpringProducedInPopulation1.genes[mutationPoint]
-                = computations.getRandomAllele(firstOffSpringProducedInPopulation1.genes[mutationPoint], bound);
-
+        int mutationPoint2 = rn.nextInt(ChromosomeSelection.geneLength);
+        if (mutationPoint > mutationPoint2) {
+            int temp = mutationPoint;
+            mutationPoint = mutationPoint2;
+            mutationPoint2 = temp;
+        }
+        for(int i = mutationPoint;i<=mutationPoint2;i++) {
+            firstOffSpringProducedInPopulation1.genes[i]
+                    = computations.getRandomAllele(firstOffSpringProducedInPopulation1.genes[i], bound);
+        }
         mutationPoint = rn.nextInt(ChromosomeSelection.geneLength);
-        secondOffSpringProducedInPopulation1.genes[mutationPoint]
-                = computations.getRandomAllele(secondOffSpringProducedInPopulation1.genes[mutationPoint], bound);
-
+        mutationPoint2 = rn.nextInt(ChromosomeSelection.geneLength);
+        if (mutationPoint > mutationPoint2) {
+            int temp = mutationPoint;
+            mutationPoint = mutationPoint2;
+            mutationPoint2 = temp;
+        }
+        for(int i = mutationPoint;i<=mutationPoint2;i++) {
+            secondOffSpringProducedInPopulation1.genes[i]
+                    = computations.getRandomAllele(secondOffSpringProducedInPopulation1.genes[i], bound);
+        }
     }
 
     private void evaluation(int position) throws CloneNotSupportedException {
@@ -365,13 +448,16 @@ public class GeneticAlgorithm {
     }
 
     private void baseEvaluation(int position, List<ChromosomeSelection> populationEvalTeam,
-                                Population switchOverPopulation2) throws CloneNotSupportedException {
+                                Population switchOverPopulation) throws CloneNotSupportedException {
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < eval_Values.length; j++) {
-                eval_Values[j][i] = populationEvalTeam.get(j).calcPairedFitness(evaluators.get(i).getStringChromosome(), i);
+                ++noOfEvaluation;
+                eval_Values[j][i] = populationEvalTeam.get(j).calcPairedFitness(
+                        evaluators.get(i).getStringChromosome(), i);
             }
         }
-        bestSelected(position, populationEvalTeam, switchOverPopulation2);
+        bestSelected(position, populationEvalTeam, switchOverPopulation);
+
     }
 
     private void bestSelected(int position, @NotNull List<ChromosomeSelection> team,
@@ -395,20 +481,23 @@ public class GeneticAlgorithm {
                 nextBest2ndPart = i;
             }
         }
-        switchOverPop.saveChromosomes(position, team.get(best1stPart));
+        switchOverPop.saveChromosomes(position, (ChromosomeSelection) team.get(best1stPart).clone());
+
         if (best1stPart == best2ndPart) {
             if (eval_Values[nextBest1stPart][0] > eval_Values[nextBest2ndPart][1]) {
                 switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest1stPart).clone());
 
             } else if (eval_Values[nextBest1stPart][0] < eval_Values[nextBest2ndPart][1]) {
-                switchOverPop.saveChromosomes(position, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
+                switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
+
 
             } else {
                 //todo put the overall best in and gamble between the other two or pick the one with the highest sum
                 if (new Random().nextBoolean()) {
                     switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest1stPart).clone());
                 } else {
-                    switchOverPop.saveChromosomes(position, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
+                    switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
+
                 }
             }
         } else {
