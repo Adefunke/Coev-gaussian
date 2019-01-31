@@ -78,7 +78,8 @@ public class GeneticAlgorithm {
         //While population searches for a chromosome with maximum fitness
         while (((ga.currentHighestlevelOfFitness > 0 && ga.rastrigan)
                 || (ga.currentHighestlevelOfFitness < (2 * ga.geneLength) && !ga.rastrigan))
-                && ga.generationCount < 200) {
+
+                && ga.generationCount < ga.popSize) {
             ++ga.generationCount;
             if (ga.fps) {
                 ga.fitnessProb = ga.population.calculateProbFitness(ga.rastrigan);
@@ -277,7 +278,6 @@ public class GeneticAlgorithm {
         rand = new Random().nextDouble();
         secondinPopulation2Picked = (ChromosomeSelection) computations.binaryToGray(population2.
                 getChromosome(positionOfChromosome(rand, fitnessProbPop2)), bound, rastrigan).clone();
-    }
 
     private int positionOfChromosome(double rand, double[] fitnessProbability) {
         if (rand > 0.6) {
@@ -390,6 +390,7 @@ public class GeneticAlgorithm {
                 firstOffSpringProducedInPopulation2,
                 secondOffSpringProducedInPopulation2);
 
+
     }
 
     /**
@@ -456,6 +457,7 @@ public class GeneticAlgorithm {
             }
         }
         bestSelected(position, populationEvalTeam, switchOverPopulation);
+
     }
 
     private void bestSelected(int position, @NotNull List<ChromosomeSelection> team,
@@ -480,6 +482,7 @@ public class GeneticAlgorithm {
             }
         }
         switchOverPop.saveChromosomes(position, (ChromosomeSelection) team.get(best1stPart).clone());
+
         if (best1stPart == best2ndPart) {
             if (eval_Values[nextBest1stPart][0] > eval_Values[nextBest2ndPart][1]) {
                 switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest1stPart).clone());
@@ -487,12 +490,14 @@ public class GeneticAlgorithm {
             } else if (eval_Values[nextBest1stPart][0] < eval_Values[nextBest2ndPart][1]) {
                 switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
 
+
             } else {
                 //todo put the overall best in and gamble between the other two or pick the one with the highest sum
                 if (new Random().nextBoolean()) {
                     switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest1stPart).clone());
                 } else {
                     switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) team.get(nextBest2ndPart).clone());
+
                 }
             }
         } else {
@@ -520,7 +525,7 @@ public class GeneticAlgorithm {
         evaluators.add((ChromosomeSelection) switchOverPop.getChromosome(position + 1).clone());
         if (eval_Values[best1stPart][0] == geneLength * 2 || eval_Values[best2ndPart][1] == geneLength * 2) {
             //todo
-//            System.out.println("Here");
+            System.out.println("Here");
         }
     }
 }
