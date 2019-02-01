@@ -92,7 +92,7 @@ public class ChromosomeSelection implements Cloneable {
      * @return crafted from the aim of one max to have all genes as 1
      */
     public double calcFitness() {
-int individualFitness=0;
+        int individualFitness = 0;
         for (int i = 0; i < geneLength; i++) {
             if (genes[i] == boundd - 1) {
                 ++individualFitness;
