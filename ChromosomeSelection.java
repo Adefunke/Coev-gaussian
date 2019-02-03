@@ -6,6 +6,7 @@
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -92,7 +93,7 @@ public class ChromosomeSelection implements Cloneable {
      * @return crafted from the aim of one max to have all genes as 1
      */
     public double calcFitness() {
-int individualFitness=0;
+        int individualFitness = 0;
         for (int i = 0; i < geneLength; i++) {
             if (genes[i] == boundd - 1) {
                 ++individualFitness;
@@ -102,10 +103,28 @@ int individualFitness=0;
         return individualFitness;
     }
 
+    private double matchCalcFitness(String chromosome) {
+        int individualFitness = 0;
+        for (int i = 0; i < chromosome.length(); i++) {
+            individualFitness += (i + 1) * Integer.parseInt(String.valueOf(chromosome.charAt(i)));
+        }
+        return individualFitness;
+    }
+
+    private double innerMatchCalcFitness(String chromosome) {
+        int individualFitness = 0;
+        for (int i = chromosome.length() - 1; i >= chromosome.length() / 2; i--) {
+            if (chromosome.charAt(i) == chromosome.charAt(i % (chromosome.length() / 2))) {
+                individualFitness += (i + 1) * Integer.parseInt(String.valueOf(chromosome.charAt(i)));
+            }
+        }
+        return individualFitness;
+    }
+
     /**
      * @return grafted from the rastrigin equation
      */
-    public double calcFitnessRas() {
+    double calcFitnessRas() {
 
         fitness = 0;
         for (int i = 0; i < geneLength / 16; i++) {
@@ -115,24 +134,34 @@ int individualFitness=0;
         return fitness;
     }
 
-    public double calcPairedFitness(@NotNull String partner, int type) {
+    double calcPairedFitness(@NotNull String partner, int type) {
         if (type == 1) {
             secondFitness = 0;
-            this.secondFitness = calcFitness() + partner.replaceAll("0", "").length();
+            //condition is: (ga.geneLength + (3 * ga.geneLength * ga.geneLength/2)) / 2
+            this.secondFitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
+            //condition: (ga.geneLength + (ga.geneLength * ga.geneLength))
+//            this.secondFitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
+            //condition is: (ga.geneLength *2)
+//            this.secondFitness = calcFitness() + partner.replaceAll("0", "").length();
             this.partner2Chromosome = partner;
             return this.secondFitness;
         } else {
             fitness = 0;
-            this.fitness = calcFitness() + partner.replaceAll("0", "").length();
+            this.fitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
+//            this.fitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
+//            this.fitness = calcFitness() + partner.replaceAll("0", "").length();
             this.partnerChromosome = partner;
             return this.fitness;
         }
     }
 
     protected Object clone() throws CloneNotSupportedException {
-        ChromosomeSelection newChromosomeSelection = null;
-        newChromosomeSelection = (ChromosomeSelection) super.clone();
-        newChromosomeSelection.genes = this.genes.clone();
+        ChromosomeSelection newChromosomeSelection = new ChromosomeSelection(2, false);
+        newChromosomeSelection.partner2Chromosome = this.partner2Chromosome;
+        newChromosomeSelection.secondFitness = this.secondFitness;
+        newChromosomeSelection.fitness = this.fitness;
+        newChromosomeSelection.partnerChromosome = this.partnerChromosome;
+        newChromosomeSelection.genes = Arrays.copyOf(this.genes, ChromosomeSelection.geneLength);
         return newChromosomeSelection;
     }
 

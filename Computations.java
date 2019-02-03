@@ -31,8 +31,8 @@ public class Computations {
      */
     public Integer getRandomAllele(int gene, int bound) {
         int allele = aNumber(bound);
-        if (allele == gene) {
-            getRandomAllele(gene, bound);
+        while (allele == gene){
+            allele = aNumber(bound);
         }
         return allele;
     }

@@ -4,6 +4,7 @@
  * and open the template in the editor.
  */
 
+import java.util.Arrays;
 import java.util.Random;
 
 /**
@@ -11,17 +12,15 @@ import java.util.Random;
  */
 public class Population implements Cloneable {
     ChromosomeSelection[] chromosomes;
-    double[] fitnessProb;
+    private double[] fitnessProb;
     double fittest = 0;
     int maxFit;
     int maxFitOfSecondFittest;
-    int populationSize = 0;
 
     //Initialize population
     public void initializePopulation(int bound, int geneLength, boolean rastrigin, int popSize) {
         fitnessProb = new double[popSize];
         chromosomes = new ChromosomeSelection[popSize];
-        populationSize = popSize;
         for (int i = 0; i < chromosomes.length; i++) {
             chromosomes[i] = new ChromosomeSelection(bound, geneLength, rastrigin);
         }
@@ -31,20 +30,20 @@ public class Population implements Cloneable {
      * @param index
      * @param chromosome saves a chromosome that has probably undergone change or is new
      */
-    public void saveChromosomes(int index, ChromosomeSelection chromosome) {
-        chromosomes[index] = chromosome;
+    public void saveChromosomes(int index, ChromosomeSelection chromosome) throws CloneNotSupportedException {
+        chromosomes[index] = (ChromosomeSelection) chromosome.clone();
     }
 
     /**
      * @param popSize
      * @return randomly pick within the array
      */
-    public ChromosomeSelection randomlyPicked(int popSize) {
-        return chromosomes[new Random().nextInt(popSize)];
+    public ChromosomeSelection randomlyPicked(int popSize) throws CloneNotSupportedException {
+        return (ChromosomeSelection) chromosomes[new Random().nextInt(popSize)].clone();
     }
 
-    public ChromosomeSelection getChromosome(int index) {
-        return chromosomes[index];
+    public ChromosomeSelection getChromosome(int index) throws CloneNotSupportedException {
+        return (ChromosomeSelection) chromosomes[index].clone();
     }
 
     /**
@@ -127,15 +126,21 @@ public class Population implements Cloneable {
         return fitnessProb;
     }
 
-    protected Object clone() throws CloneNotSupportedException, NullPointerException {
-        Population newPopulation = null;
-        newPopulation = (Population) super.clone();
-        newPopulation.chromosomes = (ChromosomeSelection[]) this.chromosomes.clone();
+    protected Object clone(Population upgradedPopulation) throws CloneNotSupportedException, NullPointerException {
+        if (upgradedPopulation==null){upgradedPopulation = (Population) super.clone();}
+        upgradedPopulation.chromosomes = this.chromosomes.clone();
         for (int i = 0; i < this.chromosomes.length; i++) {
-            newPopulation.chromosomes[i] = (ChromosomeSelection) this.chromosomes[i].clone();
+            upgradedPopulation.chromosomes[i].genes = Arrays.copyOf(this.chromosomes[i].genes, ChromosomeSelection.geneLength);
+            upgradedPopulation.chromosomes[i].secondFitness = this.chromosomes[i].secondFitness;
+            upgradedPopulation.chromosomes[i].fitness = this.chromosomes[i].fitness;
+            upgradedPopulation.chromosomes[i].partner2Chromosome = this.chromosomes[i].partner2Chromosome;
+            upgradedPopulation.chromosomes[i].partnerChromosome = this.chromosomes[i].partnerChromosome;
         }
-        newPopulation.fitnessProb = this.fitnessProb.clone();
-        return newPopulation;
+        upgradedPopulation.fitnessProb = this.fitnessProb.clone();
+        upgradedPopulation.maxFit = this.maxFit;
+        upgradedPopulation.maxFitOfSecondFittest = this.maxFitOfSecondFittest;
+        upgradedPopulation.fittest = this.fittest;
+        return upgradedPopulation;
     }
 
 }
