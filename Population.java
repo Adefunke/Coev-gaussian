@@ -127,7 +127,7 @@ public class Population implements Cloneable {
     }
 
     protected Object clone(Population upgradedPopulation) throws CloneNotSupportedException, NullPointerException {
-        upgradedPopulation = (Population) super.clone();
+        if (upgradedPopulation==null){upgradedPopulation = (Population) super.clone();}
         upgradedPopulation.chromosomes = this.chromosomes.clone();
         for (int i = 0; i < this.chromosomes.length; i++) {
             upgradedPopulation.chromosomes[i].genes = Arrays.copyOf(this.chromosomes[i].genes, ChromosomeSelection.geneLength);
@@ -140,7 +140,6 @@ public class Population implements Cloneable {
         upgradedPopulation.maxFit = this.maxFit;
         upgradedPopulation.maxFitOfSecondFittest = this.maxFitOfSecondFittest;
         upgradedPopulation.fittest = this.fittest;
-        upgradedPopulation.getSecondFittest() = (ChromosomeSelection) this.getSecondFittest().clone();
         return upgradedPopulation;
     }
 
