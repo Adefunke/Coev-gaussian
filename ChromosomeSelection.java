@@ -138,18 +138,18 @@ public class ChromosomeSelection implements Cloneable {
         if (type == 1) {
             secondFitness = 0;
             //condition is: (ga.geneLength + (3 * ga.geneLength * ga.geneLength/2)) / 2
-            this.secondFitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
+//            this.secondFitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
             //condition: (ga.geneLength + (ga.geneLength * ga.geneLength))
 //            this.secondFitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
             //condition is: (ga.geneLength *2)
-//            this.secondFitness = calcFitness() + partner.replaceAll("0", "").length();
+            this.secondFitness = calcFitness() + partner.replaceAll("0", "").length();
             this.partner2Chromosome = partner;
             return this.secondFitness;
         } else {
             fitness = 0;
-            this.fitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
+ //           this.fitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
 //            this.fitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
-//            this.fitness = calcFitness() + partner.replaceAll("0", "").length();
+            this.fitness = calcFitness() + partner.replaceAll("0", "").length();
             this.partnerChromosome = partner;
             return this.fitness;
         }
