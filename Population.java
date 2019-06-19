@@ -16,6 +16,7 @@ public class Population implements Cloneable {
     double fittest = -1000;
     int maxFit;
     int maxFitOfSecondFittest;
+    int positionPointer=0;
     int POPSIZE;
 
     //Initialize population
