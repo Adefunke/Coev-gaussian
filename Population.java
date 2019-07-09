@@ -16,7 +16,7 @@ public class Population implements Cloneable {
     double fittest = -1000;
     int maxFit;
     int maxFitOfSecondFittest;
-    int positionPointer=0;
+    int positionPointer = 0;
     int POPSIZE;
 
     //Initialize population
@@ -49,9 +49,9 @@ public class Population implements Cloneable {
      * @return randomly pick within the pop and archive pop
      */
     public ChromosomeSelection randomlyPicked(int popSize, int archivePopSize, List<ChromosomeSelection> archiveChromosome) throws CloneNotSupportedException {
-        int position = new Random().nextInt(popSize);
-        if (position > popSize) {
-            return (ChromosomeSelection) archiveChromosome.get(position).clone();
+        int position = new Random().nextInt(popSize + archivePopSize);
+        if (position >= popSize) {
+            return (ChromosomeSelection) archiveChromosome.get(position - popSize).clone();
         } else {
             return (ChromosomeSelection) chromosomes[position].clone();
         }

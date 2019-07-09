@@ -28,6 +28,8 @@
         static double S2 = 1.0 / 32;
         static double H1 = 50;
         static double H2 = 150;
+        double SMTQHas32 = 32;
+        double SMTQHas8 = 8;
 
         public ChromosomeSelection(int bound, int geneLength, boolean rastrigin) {
             Random rn = new Random();
@@ -40,6 +42,7 @@
                     genes[i] = (rn.nextInt(91) - 45);
                 }
             } else {
+                //genes[0] = 1;
                 for (int i = 0; i < genes.length; i++) {
                     genes[i] = rn.nextInt(bound);
                 }
@@ -112,19 +115,30 @@
                     + independentVariableXorY;
         }
 
-        private double SMTQ(String chromosome, String partnerChromosom) {
-            double xChromosome = Integer.parseInt(chromosome, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
-            double yChromosome = Integer.parseInt(partnerChromosom, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
-            double value1 = H1 * (1 - ((32 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X1, Y1, X1, 1) - X1), 2) +
-                    8 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X1, Y1, Y1, -1) - Y1), 2)) / S1));
+        private double SMTQ(String chromosome, String partnerChromosom, boolean isSMTQ) {
+            double xChromosome = Long.parseLong(chromosome, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
+            double yChromosome = Long.parseLong(partnerChromosom, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
+            double value1;
+            double value2;
+            if (isSMTQ) {
+                value1 = H1 * (1 - ((SMTQHas32 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X1, Y1, X1, 1) - X1), 2) +
+                        SMTQHas8 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X1, Y1, Y1, -1) - Y1), 2)) / S1));
 
-            double value2 = H2 * (1 - ((32 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X2, Y2, X2, 1) - X2), 2) +
-                    8 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X2, Y2, Y2, -1) - Y2), 2)) / S2));
-            if (value1 > value2) {
-                return value1;
+                value2 = H2 * (1 - ((SMTQHas32 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X2, Y2, X2, 1) - X2), 2) +
+                        SMTQHas8 * Math.pow((calculateTheXAndYs(xChromosome, yChromosome, X2, Y2, Y2, -1) - Y2), 2)) / S2));
             } else {
-                return value2;
+                value1 = H1 * (1 - ((SMTQHas32 * Math.pow((xChromosome - X1), 2) +
+                        SMTQHas8 * Math.pow((yChromosome - Y1), 2)) / S1));
+
+                value2 = H2 * (1 - ((SMTQHas32 * Math.pow((xChromosome - X2), 2) +
+                        SMTQHas8 * Math.pow((yChromosome - Y2), 2)) / S2));
             }
+            return Math.max(value1, value2);
+        }
+
+        private double MTQ(String chromosome, String partnerChromosom) {
+            SMTQHas32 = SMTQHas8 = 16;
+            return SMTQ(chromosome, partnerChromosom, false);
         }
 
         private double getDomainXorY(Double initialXorY) {
@@ -137,6 +151,38 @@
 
             return -1 * (100 * (Math.pow(Math.pow(getDomainXorY(xChromosome), 2) - getDomainXorY(yChromosome), 2))
                     + Math.pow((1 - getDomainXorY(xChromosome)), 2));
+        }
+
+        double griewank(String chromosome, String partnerChromosom) {
+            Double xChromosome = Integer.parseInt(chromosome, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
+            Double yChromosome = Integer.parseInt(partnerChromosom, 2) / (Math.pow(2, ChromosomeSelection.geneLength) - 1);
+
+            return 1 - (Math.pow(getDomainXorY(xChromosome), 2) / 4000) - (Math.pow(getDomainXorY(yChromosome), 2) / 4000)
+                    + Math.cos(getDomainXorY(xChromosome)) * Math.cos(getDomainXorY(yChromosome) / Math.sqrt(2));
+        }
+
+        double eggHolderFunction(String chromosome, String partnerChromosom) {
+            Double xChromosome = ((Integer.parseInt(chromosome, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 512;
+            Double yChromosome = ((Integer.parseInt(partnerChromosom, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 512;
+
+            return ((yChromosome + 47) * Math.sin(Math.sqrt(Math.abs(0.5 * xChromosome + yChromosome + 47)))) +
+                    xChromosome * Math.sin(Math.sqrt(Math.abs(xChromosome + yChromosome + 47)));
+        }
+
+        double bohachevskyFunction(String chromosome, String partnerChromosom) {
+            Double xChromosome = ((Integer.parseInt(chromosome, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 100;
+            Double yChromosome = ((Integer.parseInt(partnerChromosom, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 100;
+
+            return (0.3 * Math.cos(3 * xChromosome * Math.PI)) + (0.4 * Math.cos(4 * yChromosome * Math.PI))
+                    - 0.7 - Math.pow(xChromosome, 2) - (2 * Math.pow(yChromosome, 2));
+        }
+
+        double schafferFunction(String chromosome, String partnerChromosom) {
+            Double xChromosome = ((Integer.parseInt(chromosome, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 100;
+            Double yChromosome = ((Integer.parseInt(partnerChromosom, 2) * 2 / (Math.pow(2, ChromosomeSelection.geneLength) - 1)) - 1) * 100;
+
+            return Math.pow((Math.pow(xChromosome, 2) + Math.pow(yChromosome, 2)), 0.25) *
+                    (Math.pow(Math.sin(50*Math.pow((Math.pow(xChromosome, 2) + Math.pow(yChromosome, 2)), 0.1)), 2)+1);
         }
 
         double boothDomain(String chromosome, String partnerChromosom) {
@@ -186,19 +232,6 @@
             return individualFitness;
         }
 
-        /**
-         * @return grafted from the rastrigin equation
-         */
-        double calcFitnessRas() {
-
-            fitness = 0;
-            for (int i = 0; i < geneLength / 16; i++) {
-                fitness += Math.pow(genes[i] / 10.0, 2) - (10 * Math.cos(2 * Math.PI * genes[i] / 10));
-            }
-            fitness += (10 * geneLength / 16.0);
-            return fitness;
-        }
-
         double calcPairedFitness(@NotNull String partner, int type) {
             if (type == 1) {
                 secondFitness = 0;
@@ -208,8 +241,8 @@
                 //            this.secondFitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
                 //condition is: (ga.geneLength *2)
                 //this.secondFitness = calcFitness() + partner.replaceAll("0", "").length();
-                this.secondFitness = SMTQ(this.getStringChromosome(), partner);
-                //this.secondFitness = boothDomain(this.getStringChromosome(), partner);
+                //this.secondFitness = MTQ(this.getStringChromosome(), partner);
+                this.secondFitness = rosenBrockDomain(this.getStringChromosome(), partner);
                 this.partner2Chromosome = partner;
                 return this.secondFitness;
             } else if (type == 0) {
@@ -217,16 +250,16 @@
                 //           this.fitness = innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
                 //            this.fitness = matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
                 //this.fitness = calcFitness() + partner.replaceAll("0", "").length();
-                this.fitness = SMTQ(this.getStringChromosome(), partner);
-                //this.fitness =boothDomain(this.getStringChromosome(), partner);
+                //this.fitness = MTQ(this.getStringChromosome(), partner);
+                this.fitness = rosenBrockDomain(this.getStringChromosome(), partner);
                 this.partnerChromosome = partner;
                 return this.fitness;
             } else {
                 //           return innerMatchCalcFitness(this.getStringChromosome()) + innerMatchCalcFitness(partner);
                 //           return matchCalcFitness(this.getStringChromosome()) + matchCalcFitness(partner);
                 //return calcFitness() + partner.replaceAll("0", "").length();
-                return SMTQ(this.getStringChromosome(), partner);
-                //return boothDomain(this.getStringChromosome(), partner);
+                //return MTQ(this.getStringChromosome(), partner);
+                return rosenBrockDomain(this.getStringChromosome(), partner);
             }
         }
 

@@ -67,7 +67,7 @@ public class GeneticAlgorithm {
     private int noOfmutations = 0;
     private int noOfComputatons = 0;
     private int noOfCrossover = 0;
-    int evaluatorSize = 4;
+    int evaluatorSize = 7;
     private boolean foundFittest = false;
     private boolean foundFittestinPop1 = false;
     //this controls if what we are computing contains integer or binary values
@@ -80,7 +80,7 @@ public class GeneticAlgorithm {
     private int noOfReoccurence = 5000;
 
     @NotNull
-    private int[] popSizeArray = {/*2, 4, 6,*/ 10, 20, 50, 100, 150, 200, 250, 300, 350, 400};
+    private int[] popSizeArray = {/*2, 4, 6, 10, 20,*/ 50, 100, 150, 200, 250, 300, 350, 400};
     //end of test variables
 
     //this dictates the length of each individuals/chromosomes
@@ -94,7 +94,11 @@ public class GeneticAlgorithm {
     @NotNull
     private List<ChromosomeSelection> archivePopulation = new ArrayList<>();
     @NotNull
+    private List<ChromosomeSelection> archivePopulation2 = new ArrayList<>();
+    @NotNull
     private List<ChromosomeSelection> tempArchivePopulation = new ArrayList<>();
+    @NotNull
+    private List<ChromosomeSelection> tempArchivePopulation2 = new ArrayList<>();
     @NotNull
     private List<ChromosomeSelection> evaluators = new ArrayList<>();
     @NotNull
@@ -114,13 +118,11 @@ public class GeneticAlgorithm {
         ArrayList<String> result = new ArrayList<>();
 
         GeneticAlgorithm ga = new GeneticAlgorithm();
-//Get the file reference
-        Path path = Paths.get("output.txt");
+        //Get the file reference
+        Path path = Paths.get("outputRosen.txt");
         //   for (int reOccur : ga.noOfReoccurences) {
         //ga.noOfReoccurence = reOccur;
         for (int popsiz : ga.popSizeArray) {
-
-//Use try-with-resource to get auto-closeable writer instance
             for (int i = 0; i < 250; i++) {
                 String fittestChromosome = "";
                 result.add("\n" + popsiz + "\t ");
@@ -137,39 +139,41 @@ public class GeneticAlgorithm {
                 while ((
                         //ga.generationCount < reOccur &&
                         ga.noOfEvaluation < 51200 &&
-                                ga.currentHighestlevelOfFitness < 150.0
+                                ga.currentHighestlevelOfFitness < 0.0
                                 && !ga.rastrigan
                         // && ga.stagnantValue < ga.noOfReoccurence
                 )
                     //   || (ga.currentHighestlevelOfFitness < (ga.geneLength * 2) && !ga.rastrigan))
                 ) {
+                    ++ga.generationCount;
                     if (ga.generationCount > 2) {
                         ga.switchOverPopulation.positionPointer = 2;
                         ga.switchOverPopulation2.positionPointer = 2;
                     }
-                    ++ga.generationCount;
                     int beginfrom = ga.naturalSelection(new Random().nextBoolean());
                     //Do the things involved in evolution
 
-                    for (; beginfrom < popsiz; beginfrom += 2) {
+                    while (beginfrom < popsiz) {
                         ga.tournamentSelection(popsiz, ga.rastrigan);
                         if (ga.foundFittest || ga.stagnantValue >= ga.noOfReoccurence) {
                             break;
                         }
                         ga.process(beginfrom);
                         beginfrom = ga.switchOverPopulation.positionPointer > ga.switchOverPopulation2.positionPointer
-                                ? ga.switchOverPopulation.positionPointer - 1 : ga.switchOverPopulation2.positionPointer - 1;
+                                ? ga.switchOverPopulation.positionPointer : ga.switchOverPopulation2.positionPointer;
                     }
                     if (ga.switchOverPopulation.positionPointer < popsiz) {
-                        ga.filler(ga.switchOverPopulation, ga.switchOverPopulation2);
+                        ga.filler(ga.switchOverPopulation, ga.population, ga.population2, ga.archivePopulation2, ga.tempArchivePopulation2);
                     } else if (ga.switchOverPopulation2.positionPointer < popsiz) {
-                        ga.filler(ga.switchOverPopulation2, ga.switchOverPopulation);
+                        ga.filler(ga.switchOverPopulation2, ga.population2, ga.population, ga.archivePopulation, ga.tempArchivePopulation);
                     }
                     // moving the new generation into the old generation space
                     ga.population = (Population) ga.switchOverPopulation.clone(ga.population);
                     ga.population2 = (Population) ga.switchOverPopulation2.clone(ga.population2);
                     ga.archivePopulation = ga.tempArchivePopulation;
                     ga.tempArchivePopulation.clear();
+                    ga.archivePopulation2 = ga.tempArchivePopulation2;
+                    ga.tempArchivePopulation2.clear();
                     //Calculate new fitness value
                     //todo the best value all through
                     Population tempPop = null;
@@ -181,8 +185,7 @@ public class GeneticAlgorithm {
                     fittestChromosome = tempPop.getChromosome(tempPop.maxFit).getStringChromosome();
                     ga.currentHighestlevelOfFitness = tempPop.fittest;
                     System.out.println("The maxfit is" + tempPop.maxFit);
-                    if (tempPop.getChromosome(tempPop.maxFit).fitness ==
-                            tempPop.fittest) {
+                    if (tempPop.getChromosome(tempPop.maxFit).fitness == tempPop.fittest) {
                         bestPartner = tempPop.getChromosome(tempPop.maxFit).partnerChromosome;
 
                     } else {
@@ -205,6 +208,7 @@ public class GeneticAlgorithm {
                     ga.fittestPartner = bestPartner;
                     ga.previousFitness = ga.currentHighestlevelOfFitness;
 
+//                       result.add(String.valueOf("\n" + Math.floor(ga.currentHighestlevelOfFitness * 100000 + .5) / 100000) + "\n");
                 }
                 //when a solution is found or 100 generations have been produced
                 System.out.println("\nno of evaluations " + ga.noOfEvaluation);
@@ -212,8 +216,8 @@ public class GeneticAlgorithm {
                 System.out.println("Fitness: " + ga.currentHighestlevelOfFitness);
                 System.out.println("The best pair are: " + fittestChromosome +
                         " and \n" + bestPartner);
-                System.out.println("The best pair are actually: " + Integer.parseInt(fittestChromosome, 2) / Math.pow(2, ChromosomeSelection.geneLength) +
-                        " and \n" + Integer.parseInt(bestPartner, 2) / Math.pow(2, ChromosomeSelection.geneLength));
+                System.out.println("The best pair are actually: " + Long.parseLong(fittestChromosome, 2) / Math.pow(2, ChromosomeSelection.geneLength) +
+                        " and \n" + Long.parseLong(bestPartner, 2) / Math.pow(2, ChromosomeSelection.geneLength));
                 System.out.println("probability of mutation is " + (double) ga.noOfmutations / ga.noOfComputatons);
                 System.out.println("probability of cross over is " + (double) ga.noOfCrossover / ga.noOfComputatons);
                 result.add(ga.noOfEvaluation + "\t ");
@@ -223,7 +227,7 @@ public class GeneticAlgorithm {
             }
         }
         //  }
-//Use try-with-resource to get auto-closeable writer instance
+        //Use try-with-resource to get auto-closeable writer instance
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
             writer.write(String.valueOf(result));
         } catch (IOException e) {
@@ -252,8 +256,11 @@ public class GeneticAlgorithm {
         //crossover with a random and quite high probability
         if (rn.nextInt() % 5 < 4) {
             ++noOfCrossover;
-            //onePointCrossover();
-            uniformCrossover();
+            if (stagnantValue < 3 * generationCount / 4||stagnantValue>10) {
+                uniformCrossover();
+            } else {
+                arithmetricCrossover();
+            }
             twoPointCrossover();
         } else {
             populationEvaluationStarters(
@@ -265,7 +272,10 @@ public class GeneticAlgorithm {
         }
 
         //mutate with a random and quite low probability
-        if (rn.nextInt() % 23 >= 21) {
+        if (rn.nextInt() % 23 >= 18 && stagnantValue < generationCount / 2) {
+            ++noOfmutations;
+            mutation();
+        } else if ((stagnantValue > generationCount / 2 ||stagnantValue>10)&& rn.nextInt() % 23 <= 18) {
             ++noOfmutations;
             mutation();
         }
@@ -285,8 +295,11 @@ public class GeneticAlgorithm {
         //crossover with a random and quite high probability
         if (rn.nextInt() % 5 < 4) {
             ++noOfCrossover;
-            //onePointCrossover();
-            uniformCrossover();
+            if (stagnantValue < 3 * generationCount / 4 ||stagnantValue<10) {
+                uniformCrossover();
+            } else {
+                arithmetricCrossover();
+            }
             twoPointCrossover();
         } else {
             populationEvaluationStarters(
@@ -299,7 +312,7 @@ public class GeneticAlgorithm {
         }
 
         //mutate with a random and quite low probability
-        if (rn.nextInt() % 23 >= 21) {
+        if (rn.nextInt() % 23 >= 18) {
             ++noOfmutations;
             mutation();
         }
@@ -307,8 +320,11 @@ public class GeneticAlgorithm {
         evaluators.add((ChromosomeSelection) firstinPopulation2Picked.clone());
         evaluators.add((ChromosomeSelection) secondinPopulation2Picked.clone());
         if (generationCount > 1) {
-            grandParentEvaluators(firstinPopulation2Picked, secondinPopulation2Picked);
-            eval_Values = new double[evaluatorSize][evaluatorSize];
+            grandParentEvaluators(firstinPopulation1Picked, secondinPopulation1Picked);
+            if (population2.fittest > -1000) {
+                evaluators.add(new ChromosomeSelection(population2.getChromosome(population2.maxFit).getStringChromosome()));
+            }
+            eval_Values = new double[population1EvalTeam.size()][evaluatorSize];
             // todo get a more effective method for this
             //  eval_Values = new double[6][evaluators.size()];
         }
@@ -319,17 +335,17 @@ public class GeneticAlgorithm {
     }
 
     private void grandParentEvaluators(@NotNull ChromosomeSelection parent1, ChromosomeSelection parent2) {
-        if (parent1.fitness > parent1.secondFitness) {
-            evaluators.add(new ChromosomeSelection(parent1.partner2Chromosome));
-        } else {
-            evaluators.add(new ChromosomeSelection(parent1.partnerChromosome));
-        }
+//        if (parent1.fitness < parent1.secondFitness) {
+        evaluators.add(new ChromosomeSelection(parent1.partner2Chromosome));
+//        } else {
+        evaluators.add(new ChromosomeSelection(parent1.partnerChromosome));
+//        }
         if (parent2 != null) {
-            if (parent2.fitness > parent2.secondFitness) {
-                evaluators.add(new ChromosomeSelection(parent2.partner2Chromosome));
-            } else {
-                evaluators.add(new ChromosomeSelection(parent2.partnerChromosome));
-            }
+//            if (parent2.fitness > parent2.secondFitness) {
+            evaluators.add(new ChromosomeSelection(parent2.partner2Chromosome));
+//            } else {
+            evaluators.add(new ChromosomeSelection(parent2.partnerChromosome));
+//            }
         }
 
     }
@@ -355,6 +371,8 @@ public class GeneticAlgorithm {
         fourthOffSpringProducedInPopulation2 = null;
         eval_Values = new double[evaluatorSize][2];
         paretoFrontTeam.clear();
+        archivePopulation2.clear();
+        tempArchivePopulation2.clear();
         archivePopulation.clear();
         tempArchivePopulation.clear();
         population1EvalTeam = new ArrayList<>();
@@ -373,16 +391,16 @@ public class GeneticAlgorithm {
     private int naturalSelection(boolean elitism) throws CloneNotSupportedException {
         if (generationCount > 2) {
             //Select the most fittest chromosome
-            ChromosomeSelection fittest = (ChromosomeSelection) switchOverPopulation.getChromosome(population.maxFit).clone();
+            ChromosomeSelection fittest = (ChromosomeSelection) population.getChromosome(population.maxFit).clone();
 
             //Select the second most fittest chromosome
-            ChromosomeSelection secondFittest = (ChromosomeSelection) switchOverPopulation.getChromosome(population.maxFitOfSecondFittest).clone();
+            ChromosomeSelection secondFittest = (ChromosomeSelection) population.getChromosome(population.maxFitOfSecondFittest).clone();
             firstinPopulation1Picked = fittest;
             secondinPopulation1Picked = secondFittest;
-            fittest = (ChromosomeSelection) switchOverPopulation2.getChromosome(switchOverPopulation2.maxFit).clone();
+            fittest = (ChromosomeSelection) population2.getChromosome(population2.maxFit).clone();
 
             //Select the second most fittest chromosome
-            secondFittest = (ChromosomeSelection) switchOverPopulation2.getChromosome(switchOverPopulation2.maxFitOfSecondFittest).clone();
+            secondFittest = (ChromosomeSelection) population2.getChromosome(population2.maxFitOfSecondFittest).clone();
 
             firstinPopulation2Picked = (ChromosomeSelection) fittest.clone();
             secondinPopulation2Picked = (ChromosomeSelection) secondFittest.clone();
@@ -410,18 +428,18 @@ public class GeneticAlgorithm {
             population2EvalTeam.clear();
             String pos = "";
             if (universalEval) {
-                pos = universalValueTournamentSelection(popSize, population1EvalTeam, switchOverPopulation);
+                pos = universalValueTournamentSelection(popSize, population1EvalTeam, population, archivePopulation);
             } else {
-                pos = globalMultiObjectiveTournamentSelection(popSize, population1EvalTeam, switchOverPopulation);
+                pos = globalMultiObjectiveTournamentSelection(popSize, population1EvalTeam, population, archivePopulation);
             }
             firstinPopulation1Picked = (ChromosomeSelection) population1EvalTeam.get(
                     Integer.parseInt(pos.split(" ")[0])).clone();
             secondinPopulation1Picked = (ChromosomeSelection) population1EvalTeam.get(
                     Integer.parseInt(pos.split(" ")[1])).clone();
             if (universalEval) {
-                pos = universalValueTournamentSelection(popSize, population2EvalTeam, switchOverPopulation2);
+                pos = universalValueTournamentSelection(popSize, population2EvalTeam, population2, archivePopulation2);
             } else {
-                pos = globalMultiObjectiveTournamentSelection(popSize, population2EvalTeam, switchOverPopulation2);
+                pos = globalMultiObjectiveTournamentSelection(popSize, population2EvalTeam, population2, archivePopulation2);
             }
             firstinPopulation2Picked = (ChromosomeSelection) population2EvalTeam.get(
                     Integer.parseInt(pos.split(" ")[0])).clone();
@@ -435,14 +453,23 @@ public class GeneticAlgorithm {
             population1EvalTeam.clear();
             population2EvalTeam.clear();
         } else {
-            firstinPopulation1Picked = (ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize).clone();
-            secondinPopulation1Picked = (ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize).clone();
-            firstinPopulation2Picked = (ChromosomeSelection) switchOverPopulation2.randomlyPicked(popSize).clone();
-            secondinPopulation2Picked = (ChromosomeSelection) switchOverPopulation2.randomlyPicked(popSize).clone();
+
+            firstinPopulation1Picked = randomSelectors(population, archivePopulation);
+            secondinPopulation1Picked = randomSelectors(population, archivePopulation);
+            firstinPopulation2Picked = randomSelectors(population2, archivePopulation2);
+            secondinPopulation2Picked = randomSelectors(population2, archivePopulation2);
         }
     }
 
-    private void tournamentSelectionForFillers(Population switchPopFiller) throws CloneNotSupportedException {
+    private ChromosomeSelection randomSelectors(Population pop, List<ChromosomeSelection> archivePop) throws CloneNotSupportedException {
+        if (archivePop.isEmpty()) {
+            return (ChromosomeSelection) pop.randomlyPicked(pop.POPSIZE).clone();
+        } else {
+            return (ChromosomeSelection) pop.randomlyPicked(pop.POPSIZE, archivePop.size(), archivePop).clone();
+        }
+    }
+
+    private void tournamentSelectionForFillers(Population switchPopFiller, List<ChromosomeSelection> archivePop) throws CloneNotSupportedException {
         if (switchPopFiller.POPSIZE >= 10) {
             eval_Values = new double[10][2];
         } else {
@@ -451,9 +478,9 @@ public class GeneticAlgorithm {
         population1EvalTeam.clear();
         String pos = "";
         if (universalEval) {
-            pos = universalValueTournamentSelection(switchPopFiller.POPSIZE, population1EvalTeam, switchPopFiller);
+            pos = universalValueTournamentSelection(switchPopFiller.POPSIZE, population1EvalTeam, switchPopFiller, archivePop);
         } else {
-            pos = globalMultiObjectiveTournamentSelection(switchPopFiller.POPSIZE, population1EvalTeam, switchPopFiller);
+            pos = globalMultiObjectiveTournamentSelection(switchPopFiller.POPSIZE, population1EvalTeam, switchPopFiller, archivePop);
         }
         firstinPopulation1Picked = (ChromosomeSelection) population1EvalTeam.get(
                 Integer.parseInt(pos.split(" ")[0])).clone();
@@ -465,25 +492,27 @@ public class GeneticAlgorithm {
     }
 
     private String universalValueTournamentSelection(int popSize, @NotNull List<ChromosomeSelection> population1EvalTeam,
-                                                     @NotNull Population switchOverPopulation) throws CloneNotSupportedException {
+                                                     @NotNull Population pop, List<ChromosomeSelection> archivePop) throws CloneNotSupportedException {
         for (int i = 0; i < eval_Values.length; i++) {
-            if (archivePopulation.isEmpty()) {
-                population1EvalTeam.add((ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize).clone());
+            if (archivePop.isEmpty()) {
+                population1EvalTeam.add((ChromosomeSelection) pop.randomlyPicked(popSize).clone());
             } else {
-                population1EvalTeam.add((ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize, archivePopulation.size(), archivePopulation).clone());
+                population1EvalTeam.add((ChromosomeSelection) pop.randomlyPicked(popSize, archivePop.size(), archivePop).clone());
             }
             eval_Values[i][0] = population1EvalTeam.get(i).fitness + population1EvalTeam.get(i).secondFitness;
         }
         int max = 0;
-        int secondMax = 0;
+        int secondMax = 1;
         for (int i = 1; i < eval_Values.length; i++) {
             if (eval_Values[i][0] > eval_Values[max][0]) {
                 //if (eval_Values[i][0] <= eval_Values[max][0]) {
                 secondMax = max;
                 max = i;
             }
-        }
-        for (int i = 1; i < eval_Values.length; i++) {
+        }//goal is to ensure that secondMax starts off as any number but max.
+        //if it starts of as max, it can't be overridden
+        secondMax = (max + secondMax) % evaluators.size();
+        for (int i = 0; i < eval_Values.length; i++) {
             if (eval_Values[i][0] >= eval_Values[secondMax][0] && max != i) {
                 //if (eval_Values[i][0] <= eval_Values[secondMax][0]) {
                 secondMax = i;
@@ -497,12 +526,12 @@ public class GeneticAlgorithm {
     //multi-objective global eval
     @NotNull
     private String globalMultiObjectiveTournamentSelection(int popSize, @NotNull List<ChromosomeSelection> population1EvalTeam,
-                                                           @NotNull Population switchOverPopulation) throws CloneNotSupportedException {
+                                                           @NotNull Population pop, List<ChromosomeSelection> archivePop) throws CloneNotSupportedException {
         for (int i = 0; i < 10; i++) {
-            if (archivePopulation.isEmpty()) {
-                population1EvalTeam.add((ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize).clone());
+            if (archivePop.isEmpty()) {
+                population1EvalTeam.add((ChromosomeSelection) pop.randomlyPicked(popSize).clone());
             } else {
-                population1EvalTeam.add((ChromosomeSelection) switchOverPopulation.randomlyPicked(popSize, archivePopulation.size(), archivePopulation).clone());
+                population1EvalTeam.add((ChromosomeSelection) pop.randomlyPicked(popSize, archivePop.size(), archivePop).clone());
             }
             eval_Values[i][0] = population1EvalTeam.get(i).fitness;
             eval_Values[i][1] = population1EvalTeam.get(i).secondFitness;
@@ -513,13 +542,14 @@ public class GeneticAlgorithm {
         int secondMax2 = 0;
         for (int i = 1; i < eval_Values.length; i++) {
             if (eval_Values[i][0] > eval_Values[max][0]) {
-                secondMax = max;
                 max = i;
             }
             if (eval_Values[i][1] > eval_Values[max2][1]) {
-                secondMax2 = max2;
                 max2 = i;
-            }
+            }//goal is to ensure that secondMax starts off as any number but max.
+            //if it starts of as max, it can't be overridden
+            secondMax = (max + 1) % eval_Values.length;
+            secondMax2 = (max2 + 1) % eval_Values.length;
             if (eval_Values[i][0] > eval_Values[secondMax][0] && i != max) {
                 secondMax = i;
             }
@@ -551,6 +581,25 @@ public class GeneticAlgorithm {
             int temp = point2;
             point2 = point1;
             point1 = temp;
+        } else if (point2 == point1) {
+            if (point2 > 5 * ChromosomeSelection.geneLength / 6) {
+                point1 = rn.nextInt(point2);
+            } else {
+                point2 = rn.nextInt(ChromosomeSelection.geneLength - point1) + point1;
+            }
+        }
+
+    }
+
+    //univariate distribution
+    private void pointSelectorMutation() {
+        //Select a random crossover/mutation point
+        pointSelector();
+        if (noOfEvaluation > 51200 / 3 && point1 < ChromosomeSelection.geneLength - 1) {
+            point2 = point1 + 1;
+        } else if (stagnantValue > generationCount / 2) {
+            point1 = new Random().nextInt(ChromosomeSelection.geneLength / 4);
+            point2 = point1 + (3 * ChromosomeSelection.geneLength / 4);
         }
     }
 
@@ -640,6 +689,86 @@ public class GeneticAlgorithm {
     }
 
     /**
+     * @throws CloneNotSupportedException used when the fittest is same over too many generations
+     *                                    the three types of arithmetricCrossover used are: AND, NAND and OR
+     */
+    private void arithmetricCrossover() throws CloneNotSupportedException {
+        firstOffSpringProducedInPopulation1 = (ChromosomeSelection) firstinPopulation1Picked.clone();
+        secondOffSpringProducedInPopulation1 = (ChromosomeSelection) secondinPopulation1Picked.clone();
+        if (firstinPopulation2Picked != null) {
+            firstOffSpringProducedInPopulation2 = (ChromosomeSelection) firstinPopulation2Picked.clone();
+            secondOffSpringProducedInPopulation2 = (ChromosomeSelection) secondinPopulation2Picked.clone();
+        }
+        int randomNo = new Random().nextInt(30);
+        if (randomNo < 10) {
+            //AND and NAND
+            //AND: 1 AND 1 = 1, 0 AND 1 = 0  0 AND 0 = 0
+            //NAND: 1 NAND 1 = 0, 0 NAND 1 = 1  0 NAND 0 = 1
+            // firstOffSpringProducedInPopulation1 and  secondOffSpringProducedInPopulation2 are 'ANDed'
+            // firstOffSpringProducedInPopulation2 and  secondOffSpringProducedInPopulation1 are 'NANDed'
+            for (int i = 0; i < ChromosomeSelection.geneLength; i++) {
+                if (firstOffSpringProducedInPopulation1.genes[i] == secondOffSpringProducedInPopulation1.genes[i]) {
+                    secondOffSpringProducedInPopulation1.genes[i] = computations.getRandomAllele(secondOffSpringProducedInPopulation1.genes[i], bound);
+                } else {
+                    secondOffSpringProducedInPopulation1.genes[i] = 1;
+                    firstOffSpringProducedInPopulation1.genes[i] = 0;
+                }
+                if (firstinPopulation2Picked != null) {
+                    if (firstOffSpringProducedInPopulation2.genes[i] == secondOffSpringProducedInPopulation2.genes[i]) {
+                        firstOffSpringProducedInPopulation2.genes[i] = computations.getRandomAllele(firstOffSpringProducedInPopulation2.genes[i], bound);
+                    } else {
+                        firstOffSpringProducedInPopulation2.genes[i] = 1;
+                        secondOffSpringProducedInPopulation2.genes[i] = 0;
+                    }
+                }
+            }
+        } else if (randomNo < 20) {
+            //OR and AND
+            //AND: 1 AND 1 = 1, 0 AND 1 = 0  0 AND 0 = 0
+            // OR: 1 OR 1 = 1, 0 OR 1 = 1  0 OR 0 = 0
+            // firstOffSpringProducedInPopulation1 and  secondOffSpringProducedInPopulation2 are 'ORed'
+            // firstOffSpringProducedInPopulation2 and  secondOffSpringProducedInPopulation1 are 'ANDed'
+            for (int i = 0; i < ChromosomeSelection.geneLength; i++) {
+                if (firstOffSpringProducedInPopulation1.genes[i] != secondOffSpringProducedInPopulation1.genes[i]) {
+                    secondOffSpringProducedInPopulation1.genes[i] = 0;
+                    firstOffSpringProducedInPopulation1.genes[i] = 1;
+                }
+                if (firstinPopulation2Picked != null) {
+                    if (firstOffSpringProducedInPopulation2.genes[i] != secondOffSpringProducedInPopulation2.genes[i]) {
+                        firstOffSpringProducedInPopulation2.genes[i] = 0;
+                        secondOffSpringProducedInPopulation2.genes[i] = 1;
+                    }
+                }
+            }
+        } else {
+            //NAND and OR
+            //NAND: 1 NAND 1 = 0, 0 NAND 1 = 1  0 NAND 0 = 1
+            // OR: 1 OR 1 = 1, 0 OR 1 = 1  0 OR 0 = 0
+            // firstOffSpringProducedInPopulation1 and  secondOffSpringProducedInPopulation2 are NANDed
+            // firstOffSpringProducedInPopulation2 and  secondOffSpringProducedInPopulation1 are ORed
+            for (int i = 0; i < ChromosomeSelection.geneLength; i++) {
+                if (firstOffSpringProducedInPopulation1.genes[i] == secondOffSpringProducedInPopulation1.genes[i]) {
+                    firstOffSpringProducedInPopulation1.genes[i] = computations.getRandomAllele(firstOffSpringProducedInPopulation1.genes[i], bound);
+                } else {
+                    secondOffSpringProducedInPopulation1.genes[i] = firstOffSpringProducedInPopulation1.genes[i] = 1;
+                }
+                if (firstinPopulation2Picked != null) {
+                    if (firstOffSpringProducedInPopulation2.genes[i] == secondOffSpringProducedInPopulation2.genes[i]) {
+                        secondOffSpringProducedInPopulation2.genes[i] = computations.getRandomAllele(secondOffSpringProducedInPopulation2.genes[i], bound);
+                    } else {
+                        firstOffSpringProducedInPopulation2.genes[i] = secondOffSpringProducedInPopulation2.genes[i] = 1;
+                    }
+                }
+            }
+        }
+        populationEvaluationStarters(firstOffSpringProducedInPopulation1,
+                secondOffSpringProducedInPopulation1,
+                firstOffSpringProducedInPopulation2,
+                secondOffSpringProducedInPopulation2);
+
+    }
+
+    /**
      * picking a random gene and swapping it with its allelle
      * using inversion mutation
      */
@@ -663,14 +792,14 @@ public class GeneticAlgorithm {
     private void mutate(ChromosomeSelection firstOffSpringProducedInPopulation1,
                         ChromosomeSelection secondOffSpringProducedInPopulation1) {
         //Select a random mutation point
-        pointSelector();
+        pointSelectorMutation();
         try {
             for (int i = point1; i <= point2; i++) {
                 firstOffSpringProducedInPopulation1.genes[i]
                         = computations.getRandomAllele(firstOffSpringProducedInPopulation1.genes[i], bound);
             }
 
-            pointSelector();
+            pointSelectorMutation();
             for (int i = point1; i <= point2; i++) {
                 secondOffSpringProducedInPopulation1.genes[i]
                         = computations.getRandomAllele(secondOffSpringProducedInPopulation1.genes[i], bound);
@@ -680,7 +809,7 @@ public class GeneticAlgorithm {
         }
     }
 
-    private void firstEvaluation() throws CloneNotSupportedException {
+    private void firstEvaluation() {
         for (int i = 0; i < population.POPSIZE; i += 2) {
             noOfEvaluation += 4;
             population2.chromosomes[i].fitness = population.chromosomes[i].calcPairedFitness(
@@ -702,7 +831,7 @@ public class GeneticAlgorithm {
     }
 
     private void evaluation(int position) throws CloneNotSupportedException {
-        baseEvaluation(position, population1EvalTeam, switchOverPopulation);
+        baseEvaluation(position, population1EvalTeam, switchOverPopulation, tempArchivePopulation);
         // eval_Values = new double[6][evaluators.size()];
         if (foundFittest || stagnantValue >= noOfReoccurence) {
             foundFittestinPop1 = true;
@@ -712,18 +841,21 @@ public class GeneticAlgorithm {
 //            evaluators.clear();
 //            evaluators.add(population1EvalTeam.get(0));
 //            evaluators.add(population1EvalTeam.get(1));
-            if (evaluators.size() > 1) {
-                grandParentEvaluators(evaluators.get(0), evaluators.get(1));
-            } else {
-                grandParentEvaluators(evaluators.get(0), null);
+//            if (evaluators.size() > 1) {
+            grandParentEvaluators(firstinPopulation2Picked, secondinPopulation2Picked);
+//            } else {
+//                grandParentEvaluators(evaluators.get(0), null);
+//            }
+            if (population.fittest > -1000) {
+                evaluators.add(new ChromosomeSelection(population.getChromosome(population.maxFit).getStringChromosome()));
             }
-            eval_Values = new double[evaluatorSize][evaluatorSize];
+            eval_Values = new double[population2EvalTeam.size()][evaluatorSize];
             // todo get a more effective method for this
             //  eval_Values = new double[6][evaluators.size()];
         }
-        baseEvaluation(position, population2EvalTeam, switchOverPopulation2);
+        baseEvaluation(position, population2EvalTeam, switchOverPopulation2, tempArchivePopulation2);
         evaluators.clear();
-        eval_Values = new double[evaluatorSize][2];
+        eval_Values = new double[population2EvalTeam.size()][2];
         if (foundFittest || stagnantValue >= noOfReoccurence) {
             foundFittestinPop1 = false;
             return;
@@ -731,14 +863,16 @@ public class GeneticAlgorithm {
     }
 
     private void baseEvaluation(int position, @NotNull List<ChromosomeSelection> populationEvalTeam,
-                                @NotNull Population switchOverPopulation) throws CloneNotSupportedException {
+                                @NotNull Population switchOverPopulation,
+                                List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         for (int i = 0; i < evaluators.size(); i++) {
-            for (int j = 0; j < eval_Values.length; j++) {
+            for (int j = 0; j < populationEvalTeam.size(); j++) {
                 ++noOfEvaluation;
                 eval_Values[j][i] = populationEvalTeam.get(j).calcPairedFitness(
                         evaluators.get(i).getStringChromosome(), i);
             }
         }
+        noOfEvaluation -= 2;
         if (evaluators.size() < eval_Values[0].length) {
             for (int i = evaluators.size(); i < eval_Values[0].length; i++) {
                 for (int j = 0; j < eval_Values.length; j++) {
@@ -747,7 +881,7 @@ public class GeneticAlgorithm {
                 }
             }
         }
-        paretoFront(position, populationEvalTeam, switchOverPopulation);
+        paretoFront(position, populationEvalTeam, switchOverPopulation, tempArchivePop);
         // bestSelected(position, populationEvalTeam, switchOverPopulation);
 
     }
@@ -756,9 +890,10 @@ public class GeneticAlgorithm {
      * @param evalTeam pick pareto fronts; i.e incomparable values
      */
     void paretoFront(int position, @NotNull List<ChromosomeSelection> evalTeam,
-                     @NotNull Population switchOverPop) throws CloneNotSupportedException {
+                     @NotNull Population switchOverPop,
+                     List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         paretoFrontTeam.add(evalTeam.get(0));
-        for (int i = 1; i < evaluatorSize; i++) {
+        for (int i = 1; i < evalTeam.size(); i++) {
             int sizeOfParetoFrontTeam = paretoFrontTeam.size();
             boolean dominatedBefore = false;
             boolean nonDominatedBefore = false;
@@ -770,26 +905,28 @@ public class GeneticAlgorithm {
                                 eval_Values[i][1] >= eval_Values[positionInEvalTeam][1] &&
                                 eval_Values[i][2] >= eval_Values[positionInEvalTeam][2] &&
                                 eval_Values[i][3] >= eval_Values[positionInEvalTeam][3]
-//                                && eval_Values[i][4] >= eval_Values[positionInEvalTeam][4]
-//                                && eval_Values[i][5] >= eval_Values[positionInEvalTeam][5]
+                                && eval_Values[i][4] >= eval_Values[positionInEvalTeam][4]
+                                && eval_Values[i][5] >= eval_Values[positionInEvalTeam][5]
+                                && eval_Values[i][6] >= eval_Values[positionInEvalTeam][6]
                         ) {
-                            if (!dominatedBefore) {
+                          //  if (!dominatedBefore) {
                                 paretoFrontTeam.set(j, evalTeam.get(i));
-                                dominatedBefore = true;
-                            }
-                        } else if (eval_Values[i][0] < eval_Values[positionInEvalTeam][0] &&
-                                eval_Values[i][1] < eval_Values[positionInEvalTeam][1] &&
-                                eval_Values[i][2] < eval_Values[positionInEvalTeam][2] &&
-                                eval_Values[i][3] < eval_Values[positionInEvalTeam][3]
-//                                && eval_Values[i][4] < eval_Values[positionInEvalTeam][4]
-//                                && eval_Values[i][5] < eval_Values[positionInEvalTeam][5]
+                            //    dominatedBefore = true;
+                        //    }
+                        } else if (eval_Values[i][0] <= eval_Values[positionInEvalTeam][0] &&
+                                eval_Values[i][1] <= eval_Values[positionInEvalTeam][1] &&
+                                eval_Values[i][2] <= eval_Values[positionInEvalTeam][2] &&
+                                eval_Values[i][3] <= eval_Values[positionInEvalTeam][3]
+                                && eval_Values[i][4] < eval_Values[positionInEvalTeam][4]
+                                && eval_Values[i][5] < eval_Values[positionInEvalTeam][5]
+                                && eval_Values[i][6] < eval_Values[positionInEvalTeam][6]
                         ) {
                             break;
                         } else {
-                            if (!nonDominatedBefore) {
+                           // if (!nonDominatedBefore) {
                                 paretoFrontTeam.add(evalTeam.get(i));
-                                nonDominatedBefore = true;
-                            }
+                           //     nonDominatedBefore = true;
+                       //     }
                         }
                     } else {
                         if (eval_Values[i][0] >= eval_Values[positionInEvalTeam][0] &&
@@ -829,25 +966,29 @@ public class GeneticAlgorithm {
                 }
             }
         }
-        paretoFrontBestFeetOut(position, evalTeam, switchOverPop);
+        paretoFrontBestFeetOut(position, evalTeam, switchOverPop, tempArchivePop);
     }
 
     /**
      * ensures that the two fitness the pareto fronts hold are the best and also launches the evaluator selectors --strongest individual or highest sum
      */
     void paretoFrontBestFeetOut(int position, @NotNull List<ChromosomeSelection> evalTeam,
-                                @NotNull Population switchOverPop) throws CloneNotSupportedException {
+                                @NotNull Population switchOverPop,
+                                List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         //set the two fitness in the pareto fronts to the best
         for (ChromosomeSelection paretofront : paretoFrontTeam) {
             int positionInEvalTeam = evalTeam.indexOf(paretofront);
             int max = 0;
-            int secondMax = 0;
+            int secondMax = 1;
             for (int i = 1; i < evaluators.size(); i++) {
                 if (eval_Values[positionInEvalTeam][i] > eval_Values[positionInEvalTeam][max]) {
                     max = i;
                 }
             }
-            for (int i = 1; i < evaluators.size(); i++) {
+            //goal is to ensure that secondMax starts off as any number but max.
+            //if it starts of as max, it can't be overridden
+            secondMax = (max + secondMax) % evaluators.size();
+            for (int i = 0; i < evaluators.size(); i++) {
                 if (eval_Values[positionInEvalTeam][i] > eval_Values[positionInEvalTeam][secondMax] && i != max) {
                     secondMax = i;
                 }
@@ -881,9 +1022,9 @@ public class GeneticAlgorithm {
 
         }
         if (new Random().nextInt() % 23 >= 10) {
-            pickEvaluatorsFromParetoFrontBasedOnStrongestIndividual(position, switchOverPop);
+            pickEvaluatorsFromParetoFrontBasedOnStrongestIndividual(position, switchOverPop, tempArchivePop);
         } else {
-            pickEvaluatorsFromParetoFrontBasedOnHighestSum(position, switchOverPop);
+            pickEvaluatorsFromParetoFrontBasedOnHighestSum(position, switchOverPop, tempArchivePop);
         }
     }
 
@@ -897,7 +1038,8 @@ public class GeneticAlgorithm {
      * @param switchOverPop
      * @throws CloneNotSupportedException
      */
-    private void pickEvaluatorsFromParetoFrontBasedOnStrongestIndividual(int position, @NotNull Population switchOverPop) throws CloneNotSupportedException {
+    private void pickEvaluatorsFromParetoFrontBasedOnStrongestIndividual(int position, @NotNull Population switchOverPop,
+                                                                         List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         maxFitness = Integer.MIN_VALUE;
         secondMaxFitness = Integer.MIN_VALUE;
         positionOfMax = Integer.MIN_VALUE;
@@ -924,7 +1066,7 @@ public class GeneticAlgorithm {
                 }
             }
         }
-        theSwapOrTransferIntoTheInterimPop(position, switchOverPop);
+        theSwapOrTransferIntoTheInterimPop(position, switchOverPop, tempArchivePop);
     }
 
     /**
@@ -932,7 +1074,8 @@ public class GeneticAlgorithm {
      * @param switchOverPop
      * @throws CloneNotSupportedException
      */
-    private void pickEvaluatorsFromParetoFrontBasedOnHighestSum(int position, @NotNull Population switchOverPop) throws CloneNotSupportedException {
+    private void pickEvaluatorsFromParetoFrontBasedOnHighestSum(int position, @NotNull Population switchOverPop,
+                                                                List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         maxFitness = Integer.MIN_VALUE;
         secondMaxFitness = Integer.MIN_VALUE;
         positionOfMax = Integer.MIN_VALUE;
@@ -961,7 +1104,7 @@ public class GeneticAlgorithm {
                 }
             }
         }
-        theSwapOrTransferIntoTheInterimPop(position, switchOverPop);
+        theSwapOrTransferIntoTheInterimPop(position, switchOverPop, tempArchivePop);
     }
 
     /**
@@ -969,11 +1112,10 @@ public class GeneticAlgorithm {
      * @param switchOverPop
      * @throws CloneNotSupportedException
      */
-    private void theSwapOrTransferIntoTheInterimPop(int position, @NotNull Population switchOverPop) throws CloneNotSupportedException {
+    private void theSwapOrTransferIntoTheInterimPop(int position, @NotNull Population switchOverPop,
+                                                    List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         if (secondMaxFitness >= switchOverPop.fittest && switchOverPop.positionPointer < switchOverPop.POPSIZE - 1) {
-
             switchOverPop.maxFitOfSecondFittest = switchOverPop.positionPointer + 1;
-
         }
         if (maxFitness > switchOverPop.fittest) {
             switchOverPop.fittest = maxFitness;
@@ -997,9 +1139,10 @@ public class GeneticAlgorithm {
                 switchOverPop.saveChromosomes(switchOverPop.positionPointer + 1, (ChromosomeSelection) paretoFrontTeam.get(positionOfSecondMax).clone());
                 switchOverPop.positionPointer += 2;
             } else {
-                if (!tempArchivePopulation.isEmpty()) {
-                    switchOverPop.saveChromosomes(switchOverPop.positionPointer + 1, tempArchivePopulation.get(0));
-                    tempArchivePopulation.remove(0);
+                if (!tempArchivePop.isEmpty()) {
+                    switchOverPop.saveChromosomes(switchOverPop.positionPointer + 1, tempArchivePop.get(0));
+                    tempArchivePop.remove(0);
+                    switchOverPop.positionPointer += 2;
                 } else {
                     switchOverPop.positionPointer += 1;
                     //switchOverPop.saveChromosomes(position + 1, (ChromosomeSelection) paretoFrontTeam.get(positionOfMax).clone());
@@ -1010,11 +1153,11 @@ public class GeneticAlgorithm {
         }
         for (int i = 0; i < paretoFrontTeam.size(); i++) {
             if (i != positionOfMax && i != positionOfSecondMax) {
-                tempArchivePopulation.add(paretoFrontTeam.get(i));
+                tempArchivePop.add(paretoFrontTeam.get(i));
             }
         }
         paretoFrontTeam.clear();
-        if (maxFitness >= 150.0 || secondMaxFitness >= 150.0) {
+        if (maxFitness >= 0.0 || secondMaxFitness >= 0.0) {
 //        for SMTQ
 //        if (maxFitness >= 149.999999 || secondMaxFitness >= 149.999999) {
 //            //todo
@@ -1022,16 +1165,17 @@ public class GeneticAlgorithm {
         }
     }
 
-    private void filler(Population switchpop, Population otherPop) throws CloneNotSupportedException {
+    private void filler(Population switchpop, Population realPop, Population otherPop, List<ChromosomeSelection> archivePop,
+                        List<ChromosomeSelection> tempArchivePop) throws CloneNotSupportedException {
         while (switchpop.positionPointer < switchpop.POPSIZE) {
-            tournamentSelectionForFillers(switchpop);
+            tournamentSelectionForFillers(realPop, archivePop);
             evaluators.clear();
             evaluators.add(otherPop.chromosomes[otherPop.maxFit]);
             evaluators.add(otherPop.chromosomes[otherPop.maxFitOfSecondFittest]);
-            grandParentEvaluators(evaluators.get(0), evaluators.get(1));
+            grandParentEvaluators(firstinPopulation1Picked, secondinPopulation1Picked);
             processFiller();
-            eval_Values = new double[evaluatorSize][evaluatorSize];
-            baseEvaluation(0, population1EvalTeam, switchpop);
+            eval_Values = new double[population1EvalTeam.size()][evaluatorSize];
+            baseEvaluation(0, population1EvalTeam, switchpop, tempArchivePop);
 
         }
     }
