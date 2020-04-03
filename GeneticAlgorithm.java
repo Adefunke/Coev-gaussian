@@ -31,8 +31,6 @@ public class GeneticAlgorithm {
     private Population switchOverPopulation;
     @Nullable
     private Population switchOverPopulation2;
-    @NotNull
-    private Computations computations = new Computations();
 
     @Nullable
     private ChromosomeSelection firstinPopulation1Picked;
